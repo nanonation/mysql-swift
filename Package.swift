@@ -11,7 +11,7 @@ let package = Package(
 		)
 	],
 	dependencies: [
-		.package(name: "Socket", url: "https://github.com/aroblast/socket-swift.git", .branch("master"))
+		.package(name: "Socket", url: "https://github.com/nanonation/socket-swift.git", .branch("master"))
 	],
 	targets: [
 		.target(
