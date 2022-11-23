@@ -183,6 +183,15 @@ extension MySQL {
 			
 			handshake.proto_version = packet.data[pos]
 			pos += 1
+			var foundZero = false
+			for x in pos...(packet.data.count-1) {
+				if packet.data[x] == 0 {
+					foundZero = true
+				}
+			}
+			if !foundZero {
+				return nil
+			}
 			handshake.server_version = String(cString: packet.data[pos..<packet.data.count].withUnsafeBufferPointer { $0.baseAddress! })
 			pos += (handshake.server_version?.utf8.count)! + 1
 			handshake.conn_id = packet.data[pos...pos+4].uInt32()
