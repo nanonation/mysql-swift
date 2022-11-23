@@ -190,7 +190,7 @@ extension MySQL {
 				}
 			}
 			if !foundZero {
-				return nil
+				throw ConnectionError.wrongHandshake
 			}
 			handshake.server_version = String(cString: packet.data[pos..<packet.data.count].withUnsafeBufferPointer { $0.baseAddress! })
 			pos += (handshake.server_version?.utf8.count)! + 1
