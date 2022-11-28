@@ -178,32 +178,62 @@ extension MySQL {
 		/// Read received MySQL handshake.
 		private func readHandshake() throws -> MySQL.mysql_handshake {
 			let packet : Packet = try socket.readPacket()
+
+			// assuming the server version has at least one character, then a minimum 
+			// of at least 18 bytes are required in order to have a "complete" handshake
+			if packet.data.count < 18 {
+				throw ConnectionError.wrongHandshake
+			}
+			
 			var handshake = MySQL.mysql_handshake()
 			var pos = 0
-			
 			handshake.proto_version = packet.data[pos]
 			pos += 1
+			
+			// make sure there is a zero character somewhere in the remaining data before 
+			// attempting to make String object with it... otherwise we'll cause a crash
 			var foundZero = false
 			for x in pos...(packet.data.count-1) {
 				if packet.data[x] == 0 {
 					foundZero = true
 				}
 			}
+			// if we didn't find a zero, bad handshake data
 			if !foundZero {
 				throw ConnectionError.wrongHandshake
 			}
+			
 			handshake.server_version = String(cString: packet.data[pos..<packet.data.count].withUnsafeBufferPointer { $0.baseAddress! })
 			pos += (handshake.server_version?.utf8.count)! + 1
+
+			// if we don't have enough data remaining, bad handshake 
+			if (pos+4) > packet.data.count {
+				throw ConnectionError.wrongHandshake
+			}
 			handshake.conn_id = packet.data[pos...pos+4].uInt32()
 			pos += 4
+			
+			// if we don't have enough data remaining, bad handshake
+			if (pos+8) > packet.data.count {
+				throw ConnectionError.wrongHandshake
+			}
 			handshake.scramble = Array(packet.data[pos..<pos+8])
 			pos += 8 + 1
+			
+			// if we don't have enough data remaining, bad handshake
+			if (pos+2) > packet.data.count {
+				throw ConnectionError.wrongHandshake
+			}
 			handshake.cap_flags = packet.data[pos...pos+2].uInt16()
 			pos += 2
 			
 			if packet.data.count > pos {
 				pos += 1 + 2 + 2 + 1 + 10
-				
+
+				// if we don't have enough data remaining, bad handshake
+				if (pos+12) > packet.data.count {
+					throw ConnectionError.wrongHandshake
+				}				
 				let c = Array(packet.data[pos..<pos+12])
 				handshake.scramble?.append(contentsOf:c)
 			}
